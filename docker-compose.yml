@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: ims-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  postgres:
+    image: postgres:16
+    container_name: ims-postgres
+    environment:
+      POSTGRES_USER: ims_user
+      POSTGRES_PASSWORD: ims_password
+      POSTGRES_DB: ims_analytics
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./analytics-service/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  backend:
+    build: ./backend
+    container_name: ims-backend
+    depends_on:
+      - mongo
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://mongo:27017/ims
+      JWT_SECRET: change_this_to_a_long_random_secret
+      JWT_EXPIRES_IN: 7d
+      ANALYTICS_SERVICE_URL: http://analytics-service:6000
+      CLIENT_ORIGIN: http://localhost:5173
+    ports:
+      - "5000:5000"
+
+  analytics-service:
+    build: ./analytics-service
+    container_name: ims-analytics-service
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://ims_user:ims_password@postgres:5432/ims_analytics
+      PORT: 6000
+    ports:
+      - "6000:6000"
+
+  frontend:
+    build: ./frontend
+    container_name: ims-frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:5000/api
+    ports:
+      - "5173:5173"
+
+volumes:
+  mongo_data:
+  postgres_data:

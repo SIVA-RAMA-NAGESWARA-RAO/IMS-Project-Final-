@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  h1, h2, h3 {
+    font-family: 'Fraunces', serif;
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 2px solid #3454D1;
+    outline-offset: 2px;
+  }
+  body {
+    @apply transition-colors duration-200;
+  }
+}
+
+@layer utilities {
+  .data-mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+}
