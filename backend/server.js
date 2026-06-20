@@ -22,6 +22,7 @@ const notificationRoutes = require('./src/routes/notificationRoutes');
 const offerRoutes = require('./src/routes/offerRoutes');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
 const auditRoutes = require('./src/routes/auditRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
 
 connectDB();
 
@@ -59,9 +60,14 @@ app.use('/api/notifications', notificationRoutes); // Module 9: Notification Man
 app.use('/api/offers', offerRoutes);               // Module 11: Offer & Onboarding Management
 app.use('/api/analytics', analyticsRoutes);        // Module 10: Reports & Analytics (proxied to Python/SQL)
 app.use('/api/audit', auditRoutes);                // Audit log read access (HR/Admin)
+app.use('/api/admin', adminRoutes);                // Dev admin panel (secret-protected)
 
 app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`[ims-backend] listening on port ${PORT}`));
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`[ims-backend] listening on port ${PORT}`));
+}
+
+module.exports = app;
