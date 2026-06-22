@@ -46,6 +46,7 @@ app.use(sanitizeInput); // strips script/style tags, inline handlers, javascript
 app.use(morgan('dev'));
 app.use('/api', globalLimiter);
 
+app.get('/', (req, res) => res.json({ status: 'ok', message: 'IMS Backend API is running on Vercel' }));
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ims-backend' }));
 
 // Module-to-route map (mirrors the project spec):
