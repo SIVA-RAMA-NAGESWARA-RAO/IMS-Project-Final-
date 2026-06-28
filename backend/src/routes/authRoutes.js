@@ -4,6 +4,8 @@ const {
   verifyRegistrationOtp,
   resendOtp,
   login,
+  verifyLoginOtp,
+  verifyMagicLink,
   refresh,
   logout,
   logoutAll,
@@ -12,34 +14,31 @@ const {
   resetPassword,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
-const { validate } = require('../middleware/validate');
-const { authLimiter } = require('../middleware/rateLimiters');
+const { authLimiter, otpLimiter } = require('../middleware/rateLimiters');
 const {
-  registerRules,
-  loginRules,
-  otpVerifyRules,
-  otpResendRules,
-  resetPasswordRules,
+  registerRules: registerValidator,
+  loginRules: loginValidator,
+  otpVerifyRules: otpVerifyValidator,
+  otpResendRules: forgotPasswordValidator,
+  resetPasswordRules: resetPasswordValidator,
 } = require('../validators/authValidators');
-const { body } = require('express-validator');
 
 const router = express.Router();
 
-router.post('/register', authLimiter, registerRules, validate, register);
-router.post('/verify-otp', authLimiter, otpVerifyRules, validate, verifyRegistrationOtp);
-router.post('/resend-otp', authLimiter, otpResendRules, validate, resendOtp);
-router.post('/login', authLimiter, loginRules, validate, login);
-router.post('/refresh', refresh);
-router.post('/logout', logout);
-router.post('/logout-all', protect, logoutAll);
-router.get('/me', protect, getMe);
-router.post(
-  '/forgot-password',
-  authLimiter,
-  [body('email').trim().isEmail().normalizeEmail()],
-  validate,
-  forgotPassword
-);
-router.post('/reset-password', authLimiter, resetPasswordRules, validate, resetPassword);
+// ─── Public routes ─────────────────────────────────────────────────────────
+router.post('/register',           authLimiter, registerValidator,          register);
+router.post('/verify-otp',         otpLimiter,  otpVerifyValidator,         verifyRegistrationOtp);
+router.post('/resend-otp',         otpLimiter,                              resendOtp);
+router.post('/login',              authLimiter, loginValidator,             login);
+router.post('/verify-login-otp',   otpLimiter,  otpVerifyValidator,         verifyLoginOtp);
+router.post('/verify-magic-link',  otpLimiter,                              verifyMagicLink);
+router.post('/forgot-password',    authLimiter, forgotPasswordValidator,    forgotPassword);
+router.post('/reset-password',     otpLimiter,  resetPasswordValidator,     resetPassword);
+router.post('/refresh',                                                      refresh);
+
+// ─── Protected routes ──────────────────────────────────────────────────────
+router.post('/logout',             protect, logout);
+router.post('/logout-all',         protect, logoutAll);
+router.get('/me',                  protect, getMe);
 
 module.exports = router;

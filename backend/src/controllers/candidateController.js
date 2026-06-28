@@ -1,47 +1,39 @@
 const asyncHandler = require('express-async-handler');
 const CandidateProfile = require('../models/Candidate');
-const { uploadBuffer, isConfigured } = require('../config/cloudinary');
+const { uploadFile } = require('../utils/fileUpload');
 
-// @desc Upload a resume PDF directly to Cloudinary (Module 2)
+// @desc Upload a resume PDF directly to Cloudinary or Local Fallback (Module 2)
 // @route POST /api/candidates/me/resume/upload  (multipart/form-data, field: "resume")
 const uploadResumeFile = asyncHandler(async (req, res) => {
   if (!req.file) {
     res.status(400);
     throw new Error('No file uploaded — attach a PDF under the "resume" field');
   }
-  if (!isConfigured()) {
-    res.status(503);
-    throw new Error('File storage is not configured (missing Cloudinary credentials)');
-  }
 
-  const result = await uploadBuffer(req.file.buffer, { folder: 'ims/resumes', resource_type: 'raw' });
+  const fileUrl = await uploadFile(req.file, 'ims/resumes');
 
   const profile = await CandidateProfile.findOneAndUpdate(
     { user: req.user._id },
-    { resumeUrl: result.secure_url },
+    { resumeUrl: fileUrl },
     { new: true, upsert: true }
   );
 
   res.status(201).json(profile);
 });
 
-// @desc Upload a supporting document (certificate, ID, etc.) to Cloudinary (Module 2)
+// @desc Upload a supporting document (certificate, ID, etc.) to Cloudinary or Local Fallback (Module 2)
 // @route POST /api/candidates/me/documents/upload  (multipart/form-data, field: "document")
 const uploadDocumentFile = asyncHandler(async (req, res) => {
   if (!req.file) {
     res.status(400);
     throw new Error('No file uploaded — attach a file under the "document" field');
   }
-  if (!isConfigured()) {
-    res.status(503);
-    throw new Error('File storage is not configured (missing Cloudinary credentials)');
-  }
 
-  const result = await uploadBuffer(req.file.buffer, { folder: 'ims/documents' });
+  const fileUrl = await uploadFile(req.file, 'ims/documents');
 
   const profile = await CandidateProfile.findOneAndUpdate(
     { user: req.user._id },
-    { $push: { documents: { name: req.file.originalname, url: result.secure_url, uploadedAt: new Date() } } },
+    { $push: { documents: { name: req.file.originalname, url: fileUrl, uploadedAt: new Date() } } },
     { new: true, upsert: true }
   );
 

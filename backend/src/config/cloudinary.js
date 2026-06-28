@@ -7,7 +7,14 @@ cloudinary.config({
 });
 
 const isConfigured = () =>
-  Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+  Boolean(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_CLOUD_NAME !== 'your_cloud_name' &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_KEY !== 'your_api_key' &&
+    process.env.CLOUDINARY_API_SECRET &&
+    process.env.CLOUDINARY_API_SECRET !== 'your_api_secret'
+  );
 
 // Uploads an in-memory buffer (from multer's memoryStorage) as a stream —
 // avoids ever writing the file to local disk, which matters on serverless

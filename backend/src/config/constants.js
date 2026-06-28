@@ -9,7 +9,8 @@ const APPLICATION_STATUS = [
   'Offer Released',
 ];
 
-const ROLES = ['candidate', 'hr', 'interviewer'];
+// 'admin' added for enterprise RBAC — only admins can invite HR / interviewers.
+const ROLES = ['candidate', 'hr', 'interviewer', 'admin'];
 
 const INTERVIEW_MODE = ['onsite', 'video', 'phone'];
 const INTERVIEW_STATUS = ['scheduled', 'completed', 'cancelled', 'rescheduled'];

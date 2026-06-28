@@ -43,6 +43,11 @@ const issueOtp = async (email, purpose) => {
     lastSentAt: new Date(),
   });
 
+  // Always print OTP to console in dev so login works without SMTP
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`\n🔑 [OTP] Code for ${email} (${purpose}): ${code}\n`);
+  }
+
   await sendOtpEmail(email, code, purpose);
   return { expiresInMinutes: EXPIRY_MINUTES, resendCooldownSeconds: RESEND_COOLDOWN_SECONDS };
 };

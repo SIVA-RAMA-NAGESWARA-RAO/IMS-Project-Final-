@@ -27,7 +27,18 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    const { user: loggedInUser, accessToken } = await authApi.login({ email, password });
+    const result = await authApi.login({ email, password });
+    if (result.requiresOtp) {
+      return result;
+    }
+    const { user: loggedInUser, accessToken } = result;
+    setAccessToken(accessToken);
+    setUser(loggedInUser);
+    return loggedInUser;
+  };
+
+  const completeLogin = async (tempToken, code) => {
+    const { user: loggedInUser, accessToken } = await authApi.verifyLoginOtp({ tempToken, code });
     setAccessToken(accessToken);
     setUser(loggedInUser);
     return loggedInUser;
@@ -61,7 +72,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, verifyOtp, logout, logoutAll }}>
+    <AuthContext.Provider value={{ user, loading, login, completeLogin, register, verifyOtp, logout, logoutAll }}>
       {children}
     </AuthContext.Provider>
   );

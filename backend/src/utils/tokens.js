@@ -18,13 +18,16 @@ const verifyRefreshToken = (token) => jwt.verify(token, process.env.REFRESH_TOKE
 
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME || 'ims_refresh';
 
-const refreshCookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.COOKIE_SECURE === 'true',
-  sameSite: 'strict',
-  path: '/api/auth',
-  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days; keep in sync with REFRESH_TOKEN_EXPIRES_IN
-});
+const refreshCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: process.env.COOKIE_SECURE === 'true' || isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days; keep in sync with REFRESH_TOKEN_EXPIRES_IN
+  };
+};
 
 const setRefreshCookie = (res, token) => {
   res.cookie(REFRESH_COOKIE_NAME, token, refreshCookieOptions());

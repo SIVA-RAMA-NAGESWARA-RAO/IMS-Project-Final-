@@ -8,7 +8,7 @@ const otpSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, lowercase: true, trim: true, index: true },
     codeHash: { type: String, required: true },
-    purpose: { type: String, enum: ['registration', 'password_reset'], required: true },
+    purpose: { type: String, enum: ['registration', 'password_reset', 'login'], required: true },
     attempts: { type: Number, default: 0 },
     lastSentAt: { type: Date, default: Date.now },
     expiresAt: { type: Date, required: true },

@@ -6,6 +6,8 @@ const applicationSchema = new mongoose.Schema(
     candidate: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true },
     resumeSnapshotUrl: { type: String },
+    anonymizedResumeText: { type: String },
+    aiMatchScore: { type: Number, min: 0, max: 100 },
     coverNote: { type: String },
     status: { type: String, enum: APPLICATION_STATUS, default: 'Applied' },
     currentRound: { type: Number, default: 0 },
