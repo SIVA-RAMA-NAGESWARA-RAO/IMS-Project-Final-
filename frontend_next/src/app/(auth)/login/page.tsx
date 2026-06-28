@@ -12,7 +12,9 @@ import toast from "react-hot-toast";
 import clsx from "clsx";
 import { useAuth } from "@/context/AuthContext";
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setSession, isAuthenticated, isLoading } = useAuth();
@@ -447,5 +449,17 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen w-full flex items-center justify-center bg-black">
+        <Loader2 className="w-12 h-12 text-[var(--color-primary)] animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

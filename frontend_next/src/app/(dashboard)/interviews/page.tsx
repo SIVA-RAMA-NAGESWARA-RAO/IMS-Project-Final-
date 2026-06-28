@@ -26,6 +26,7 @@ interface Interview {
     _id: string;
     candidate: { name: string; email: string };
     job: { title: string };
+    resumeSnapshotUrl?: string;
   };
   interviewers: Interviewer[];
 }

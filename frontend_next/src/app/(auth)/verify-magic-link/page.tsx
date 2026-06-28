@@ -7,7 +7,9 @@ import { Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 
-export default function VerifyMagicLinkPage() {
+import { Suspense } from "react";
+
+function VerifyMagicLinkContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setSession } = useAuth();
@@ -87,5 +89,17 @@ export default function VerifyMagicLinkPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function VerifyMagicLinkPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen w-full flex items-center justify-center bg-black">
+        <Loader2 className="w-12 h-12 text-[var(--color-primary)] animate-spin" />
+      </div>
+    }>
+      <VerifyMagicLinkContent />
+    </Suspense>
   );
 }
