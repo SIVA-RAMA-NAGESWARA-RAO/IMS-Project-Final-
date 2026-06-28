@@ -111,8 +111,5 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log(`[ims-backend] listening on port ${PORT}`));
-}
-
+app.listen(PORT, '0.0.0.0', () => console.log(`[ims-backend] listening on port ${PORT}`));
 module.exports = app;
