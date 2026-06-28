@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import apiClient, { setAuthToken, clearAuthToken } from "@/api/client";
 
 interface User {
@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const clearSession = useCallback(() => {
     setUser(null);
@@ -39,43 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("ims_user");
       localStorage.removeItem("ims_token");
     }
-    if (refreshTimerRef.current) {
-      clearTimeout(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
   }, []);
-
-  const scheduleRefresh = useCallback((token: string) => {
-    // Decode JWT to get expiry
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const expiresAt = payload.exp * 1000;
-      const refreshAt = expiresAt - Date.now() - 60_000; // refresh 1 min before expiry
-
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-
-      if (refreshAt > 0) {
-        refreshTimerRef.current = setTimeout(async () => {
-          try {
-            const res = await apiClient.post("/auth/refresh");
-            const { user: freshUser, accessToken: freshToken } = res.data;
-            setUser(freshUser);
-            setAccessToken(freshToken);
-            setAuthToken(freshToken);
-            if (typeof window !== "undefined") {
-              localStorage.setItem("ims_user", JSON.stringify(freshUser));
-              localStorage.setItem("ims_token", freshToken);
-            }
-            scheduleRefresh(freshToken);
-          } catch {
-            clearSession();
-          }
-        }, refreshAt);
-      }
-    } catch {
-      // Token decode failed - skip scheduling
-    }
-  }, [clearSession]);
 
   const setSession = useCallback((newUser: User, token: string) => {
     setUser(newUser);
@@ -85,19 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("ims_user", JSON.stringify(newUser));
       localStorage.setItem("ims_token", token);
     }
-    scheduleRefresh(token);
-  }, [scheduleRefresh]);
-
-  const isTokenExpired = (token: string) => {
-    try {
-      const parts = token.split(".");
-      if (parts.length < 3) return false; // Standalone mock token: never expires
-      const payload = JSON.parse(atob(parts[1]));
-      return payload.exp * 1000 < Date.now();
-    } catch {
-      return false; // Safe fallback for malformed tokens during standalone mock testing
-    }
-  };
+  }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {
@@ -106,50 +57,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(freshUser, freshToken);
       return true;
     } catch {
+      // Only clear if we have NO local session at all
       if (typeof window !== "undefined") {
-        const localToken = localStorage.getItem("ims_token");
-        if (!localToken || isTokenExpired(localToken)) {
+        const hasLocal = localStorage.getItem("ims_token");
+        if (!hasLocal) {
           clearSession();
-          return false;
         }
       }
-      return true;
+      return false;
     }
   }, [setSession, clearSession]);
 
-  // On mount: try to restore session from localStorage first, then fallback to refresh cookie
+  // On mount: restore from localStorage FIRST, then optionally try server refresh
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        if (typeof window !== "undefined") {
-          const localUser = localStorage.getItem("ims_user");
-          const localToken = localStorage.getItem("ims_token");
-          if (localUser && localToken && !isTokenExpired(localToken)) {
-            const parsedUser = JSON.parse(localUser);
-            setSession(parsedUser, localToken);
-            setIsLoading(false);
+
+    const init = async () => {
+      // Step 1: Restore from localStorage instantly
+      if (typeof window !== "undefined") {
+        const savedUser = localStorage.getItem("ims_user");
+        const savedToken = localStorage.getItem("ims_token");
+
+        if (savedUser && savedToken) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            setUser(parsedUser);
+            setAccessToken(savedToken);
+            setAuthToken(savedToken);
+            // Session restored — mark as NOT loading immediately
+            // Do NOT attempt server refresh — it will fail cross-origin
+            // and cause a race condition that clears the session
+            if (!cancelled) setIsLoading(false);
+            return; // ← CRITICAL: stop here, don't call /auth/refresh
+          } catch {
+            localStorage.removeItem("ims_user");
+            localStorage.removeItem("ims_token");
           }
         }
+      }
 
+      // Step 2: No local session → try cookie-based refresh (same-origin only)
+      try {
         const res = await apiClient.post("/auth/refresh");
         if (!cancelled) {
           setSession(res.data.user, res.data.accessToken);
         }
       } catch {
-        // Only clear session if local token is missing or expired
-        if (typeof window !== "undefined") {
-          const localToken = localStorage.getItem("ims_token");
-          if (!localToken || isTokenExpired(localToken)) {
-            if (!cancelled) clearSession();
-          }
-        } else {
-          if (!cancelled) clearSession();
+        // No session anywhere — user needs to log in
+        if (!cancelled) {
+          clearSession();
         }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
-    })();
+    };
+
+    init();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
