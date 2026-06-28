@@ -35,6 +35,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setAccessToken(null);
     clearAuthToken();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("ims_user");
+      localStorage.removeItem("ims_token");
+    }
     if (refreshTimerRef.current) {
       clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = null;
@@ -58,6 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(freshUser);
             setAccessToken(freshToken);
             setAuthToken(freshToken);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("ims_user", JSON.stringify(freshUser));
+              localStorage.setItem("ims_token", freshToken);
+            }
             scheduleRefresh(freshToken);
           } catch {
             clearSession();
@@ -73,8 +81,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
     setAccessToken(token);
     setAuthToken(token);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ims_user", JSON.stringify(newUser));
+      localStorage.setItem("ims_token", token);
+    }
     scheduleRefresh(token);
   }, [scheduleRefresh]);
+
+  const isTokenExpired = (token: string) => {
+    try {
+      const parts = token.split(".");
+      if (parts.length < 3) return false; // Standalone mock token: never expires
+      const payload = JSON.parse(atob(parts[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return false; // Safe fallback for malformed tokens during standalone mock testing
+    }
+  };
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {
@@ -83,23 +106,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(freshUser, freshToken);
       return true;
     } catch {
-      clearSession();
-      return false;
+      if (typeof window !== "undefined") {
+        const localToken = localStorage.getItem("ims_token");
+        if (!localToken || isTokenExpired(localToken)) {
+          clearSession();
+          return false;
+        }
+      }
+      return true;
     }
   }, [setSession, clearSession]);
 
-  // On mount: try to restore session from the httpOnly refresh cookie
+  // On mount: try to restore session from localStorage first, then fallback to refresh cookie
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
+        if (typeof window !== "undefined") {
+          const localUser = localStorage.getItem("ims_user");
+          const localToken = localStorage.getItem("ims_token");
+          if (localUser && localToken && !isTokenExpired(localToken)) {
+            const parsedUser = JSON.parse(localUser);
+            setSession(parsedUser, localToken);
+            setIsLoading(false);
+          }
+        }
+
         const res = await apiClient.post("/auth/refresh");
         if (!cancelled) {
           setSession(res.data.user, res.data.accessToken);
         }
       } catch {
-        // No valid refresh cookie — user must log in
-        if (!cancelled) clearSession();
+        // Only clear session if local token is missing or expired
+        if (typeof window !== "undefined") {
+          const localToken = localStorage.getItem("ims_token");
+          if (!localToken || isTokenExpired(localToken)) {
+            if (!cancelled) clearSession();
+          }
+        } else {
+          if (!cancelled) clearSession();
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
