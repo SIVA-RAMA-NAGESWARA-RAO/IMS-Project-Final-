@@ -33,7 +33,13 @@ function VerifyMagicLinkContent() {
         setSession(user, accessToken);
         setStatus("success");
         toast.success(`Welcome back, ${user.name.split(" ")[0]}!`);
-        setTimeout(() => router.push("/"), 1500);
+        setTimeout(() => {
+          if (typeof window !== "undefined") {
+            window.location.href = "/";
+          } else {
+            router.push("/");
+          }
+        }, 1500);
       } catch (err: any) {
         setStatus("error");
         setErrorMsg(

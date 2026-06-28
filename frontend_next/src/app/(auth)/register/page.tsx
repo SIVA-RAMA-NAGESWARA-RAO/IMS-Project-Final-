@@ -67,7 +67,11 @@ export default function RegisterPage() {
       const res = await apiClient.post("/auth/verify-otp", { email: form.email, code: otpCode });
       setSession(res.data.user, res.data.accessToken);
       toast.success("Email verified! Welcome to IMS 🎉");
-      router.push("/");
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      } else {
+        router.push("/");
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Invalid or expired code");
     } finally {

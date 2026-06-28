@@ -127,7 +127,11 @@ function LoginContent() {
       setSession(user, accessToken);
       toast.success(`Welcome back, ${user.name.split(" ")[0]}!`);
       const redirect = searchParams.get("redirect") || "/";
-      router.push(redirect);
+      if (typeof window !== "undefined") {
+        window.location.href = redirect;
+      } else {
+        router.push(redirect);
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message || "Invalid or expired code";
       setOtpError(msg);
